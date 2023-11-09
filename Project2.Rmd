@@ -1,0 +1,196 @@
+---
+title: "Predicting Diabetes"
+author: "Swati Misra"
+date: "2023-11-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#call dplyr and ggplot2 libraries
+library(dplyr)
+library(ggplot2)
+diabetes <- read.csv("diabetes_prediction_dataset.csv", header = TRUE)
+diabetesTib <- as_tibble(diabetes)
+
+```
+
+# 1. Introduction
+
+This dataset is originally from the National Institute of Diabetes and Digestive and Kidney Diseases. I found this data on Kaggle at this [link](https://www.kaggle.com/datasets/iammustafatz/diabetes-prediction-dataset/data). This dataset takes into account several diagnostic measurements to make the prediction, including gender, age, hypertension, etc. I chose this dataset to analyze because I have always been interested in using data science techniques to make predictive models for diseases such as diabetes. I will be investigating the effects of variables such as BMI, Age, Blood Pressure, smoking history, and more on predicting diabetes diagnoses.
+
+```{r echo = FALSE}
+knitr::include_graphics("diabetes.png")
+```
+
+> Buravleva Stock, Shutterstock.com
+
+# 2. How I Prepared the Data
+
+After finding the data on Kaggle, I downloaded the dataset as a .csv file and moved it into the same directory as my RMarkdown file. I was then able to import it into my RMarkdown report and converted it into a tibble utilizing R commands.
+
+
+```{r echo = FALSE}
+#convert "No Info" values to NA
+turnNA <- diabetesTib$smoking_history == "No Info"
+diabetesTib$smoking_history[turnNA] <- NA
+```
+
+  There were `r sum(is.na(diabetesTib))` patients that did not have smoking history information in the dataset. I removed these data values from the data set in order to perform the analysis. 
+    For the variables hypertension, heart disease, and diabetes, I changed the factors of 0 and 1 to the condition they represented in order to provide more clarity in the dataset.
+    Lastly, I turned the categorical variables of gender, hypertension, heart disease, and diabetes into factors to make them more memory efficient and specify the categories of the data. I also changed the variable names to exclude the underscores as well as arranged them to the order of decreasing age. 
+    When preparing this data, I came across the issue of dealing with the value names given First, the individuals without smoking history information were labeled with a "No Info" in the data set. I first changed these values to 'NA' before removing them from the dataset using the na.omit() function. 
+
+```{r echo = FALSE}
+#remove NA values
+diabetesTib <- na.omit(diabetesTib)
+
+#change numbers to strings (0 = absent,1 = present)
+diabetesTib$hypertension[diabetesTib$hypertension == 0] <- "Not detected"
+diabetesTib$hypertension[diabetesTib$hypertension == 1] <- "Detected"
+
+diabetesTib$heart_disease[diabetesTib$heart_disease == 0] <- "Not detected"
+diabetesTib$heart_disease[diabetesTib$heart_disease == 1] <- "Detected"
+
+diabetesTib$diabetes[diabetesTib$diabetes == 0] <- "No diabetes"
+diabetesTib$diabetes[diabetesTib$diabetes == 1] <- "Diabetes detected"
+
+#convert variables to factors
+for (col in names(diabetesTib)) {
+  if (is.character(diabetesTib[[col]]) || is.factor(diabetesTib[[col]])) {
+    diabetesTib[[col]] <- as.factor(diabetesTib[[col]])
+  }
+}
+
+#rename variables
+colnames(diabetesTib) <- c("Gender", "Age", "Hypertension", "Heart Disease", "Smoking History", "BMI", "HbA1c Level", "Blood Glucose Level", "Diabetes")
+
+#reshape by ascending order
+arrange(diabetesTib, desc(Age))
+
+```
+
+
+# 3. 
+
+| Variable         | Type                  | Description           |
+|------------------|-----------------------|-----------------------|
+| Gender           | Categorical (Factor)  | This variable refers to the biological sex of the patient, which can affect their susceptibility to diabetes. The three levels to this factor are Female, Male, and Other.  
+| Age              | Numeric               | This variable is included as diabetes susceptibility increases with age and it ranges from 0-80. 
+| Hypertension     | Categorical (Factor)  | This variable has two levels: whether hypertension is detected or not detected in the patient.
+| Heart Disease    | Categorical (Factor)  | This variable has two levels: whether heart disease is detected or not detected in the patient. 
+| Smoking History  | Categorical (Factor)  | This variable refers to the increased risk of diabetes with smoking and has five levels: current, never, former, not current, and ever. 
+| BMI              | Numeric               | This variable refers to the positive relationship between BMI and diabetes diagnoses and has a range of 10.16-71.55. A BMI less than 18.5 is underweight, 18.5-24.9 is normal. 25-29.9 is overweight, and 30 or greater is obese. 
+| HbA1c Level      | Numeric               | This variable is a measure of average blood sugar over 3 months; a HbA1c level more than 6.5 indicated diabetes. 
+| Blood Glucose Level| Numeric             | This variable refers to the amount of glucose in the bloodstream. 
+| Diabetes         | Categorical (Factor) | This variable refers to the presence of diabetes with 0 indicating the absence of diabetes and 1 indicating the presence. 
+
+# 4. Univariate Analysis
+
+```{r echo = FALSE}
+#function to print barplots/histograms and descriptions
+plots <- function(variable1, title){
+  if(is.factor(variable1)){
+  print(ggplot(diabetesTib) + geom_bar(aes(x = variable1), fill = "skyblue", color = "darkblue") + labs(title = title, x = variable1, y = "Frequency"))
+    print("The frequencies are:")
+    print(table(variable1))
+  }
+  else{
+     variableName1 <- deparse(substitute(variable1))
+    ggplot(diabetesTib) + geom_histogram(aes(x= variable1), fill = "skyblue", color = "darkblue") + labs(title = title, x = variableName1, y = frequency)
+  }
+  
+}
+```
+
+## 4A) Distribution of Smoking History 
+```{r echo = FALSE}
+plots(diabetesTib$`Smoking History`, "Distribution of Smoking History")
+```
+The majority of patients said they never smoked while the smallest number of patients said they had smoked at some point in their lives. 
+
+## 4B) Distribution of Heart Disease
+```{r echo = FALSE}
+plots(diabetesTib$`Heart Disease`, "Distributions of Heart Disease")
+```
+Most of the patients were not diagnosed with heart disease. 
+
+## 4C) Distribution of Diabetes
+```{r echo = FALSE}
+plots(diabetesTib$Diabetes, "Distributions of Diabetes")
+```
+Most of the patients were not diagnosed with diabetes. 
+
+## 4D) Distribution of Hypertension
+```{r echo = FALSE}
+plots(diabetesTib$Hypertension, "Distributions of Hypertension")
+```
+Most of the patients were not diagnosed with hypertension.
+
+# 5. Multivariate Analysis
+```{r echo = FALSE}
+#function to print scatterplots and descriptions
+scatterplots <- function(variable1, variable2,catVariable, colors, maintitle){
+  if(is.numeric(variable1) && is.numeric(variable2)){
+    #for variable names to label graph
+  variableName1 <- deparse(substitute(variable1))
+  variableName2 <- deparse(substitute(variable2))
+  print(ggplot(diabetesTib) + geom_point(aes(x = variable1, y = variable2, color = catVariable )) + labs(title = maintitle, x = variableName1, y = variableName2) + scale_color_manual(values = colors, name = "Legend"))
+  }
+  print(paste("The correlation coefficient of this relationship is", round(cor(variable1,variable2),2),"."))
+  if(cor(variable1,variable2) > 0.5 ||cor(variable1,variable2) < -0.5 ){
+    print("This is a strong relationship between the two variables.")
+  }
+  print("This is a weaker relationship between the two variables.")
+}
+
+```
+
+## 5A) BMI and Age Categorized by Diabetes Presence
+```{r echo = FALSE}
+
+scatterplots(diabetesTib$BMI, diabetesTib$Age, diabetesTib$Diabetes, c("purple", "pink"), "Scatterplot of BMI and Age")
+```
+
+## 5B) BMI and HbA1c Level Categorized by Hypertension Presence
+```{r echo = FALSE}
+
+scatterplots(diabetesTib$BMI, diabetesTib$`HbA1c Level`, diabetesTib$Hypertension, c("purple", "pink"), "Scatterplot of BMI AND HbA1c Level")
+```
+
+## 5C) Age and Blood Glucose Level Categorized by Heart Disease Presence
+```{r echo = FALSE}
+scatterplots(diabetesTib$Age, diabetesTib$`Blood Glucose Level`, diabetesTib$`Heart Disease`, c("purple", "pink"), "Scatterplot of Age and Blood Glucose Level")
+```
+
+## 5D) Blood Glucose Level and HbA1c Level Categorized by Heart Disease Presence
+```{r echo = FALSE}
+scatterplots(diabetesTib$`Blood Glucose Level`, diabetesTib$`HbA1c Level`, diabetesTib$`Heart Disease`, c("purple", "pink"), "Scatterplot of Blood Glucose Level AND HbA1c Level")
+```
+
+# 6 Reproducibility Resources
+
+The GitHub repository can be accessed at this [link](https://github.com/swatimisra/Project2_Diabetes).
+
+Project2.Rmd is the RMarkdown file with all code, comments, and conclusions typed. 
+
+Project2.html is the html file that contains the final report for the project. 
+
+diabetes.png is the picture file for the picture linked in the RMarkdown and the html file.
+
+diabetes_prediction_dataset.csv is the .csv file that contains all data values before I cleaned and reshaped them. 
+
+
+
+# 7. Conclusion
+
+As seen by Figure 5A, there seems to be a weak positive relationship between Age and BMI. In the scatterplot, most of the data points for patients that have diabetes were older and had higher BMIs. In Figure 5b, BMI and HbA1c levels also have a weak positive relationship.The data points also seemed to be randomly distributed dependent on detection of Hypertension. Both Blood Glucose Level and HbA1c level and Age and Blood Glucose Level have a weak positive relationship as seen in Figures 5D and 5C. These plots are separated by presence of Heart disease, and these points seem to be randomly distributed through the graph. I expected these variables to have stronger relationships as these variables are normally associated with increased risk of Diabetes. 
+
+# 8. References
+
+“Chatgpt.” ChatGPT, openai.com/chatgpt. Accessed 9 Nov. 2023. 
+
+Mustafa, Mohammed. “Diabetes Prediction Dataset.” Kaggle, 8 Apr. 2023, www.kaggle.com/datasets/iammustafatz/diabetes-prediction-dataset/data. 
+
+
